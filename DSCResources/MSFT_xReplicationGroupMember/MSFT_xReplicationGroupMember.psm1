@@ -70,7 +70,7 @@ function Get-TargetResource
         }
 
         $IncomingConnections = Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
-        $OutgoingConnections = Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+        $OutgoingConnections = Start-Job @paramsOutgoing | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
         $SourceServerList = [String[]]($IncomingConnections.SourceComputerName)
         $DestinationServerList = [String[]]($OutgoingConnections.DestinationComputerName)
 
@@ -122,7 +122,10 @@ function Set-TargetResource
 
 		[parameter(Mandatory = $true)]
 		[System.String]
-		$ContentPath
+		$ContentPath,
+
+        [System.String[]]
+        $ReplicationPeers
 	)
 
     $CurrentResource = Get-TargetResource @PSBoundParameters
@@ -205,7 +208,10 @@ function Test-TargetResource
 
 		[parameter(Mandatory = $true)]
 		[System.String]
-		$ContentPath
+		$ContentPath,
+
+        [System.String[]]
+        $ReplicationPeers
 	)
 
 	#Write-Verbose "Use this cmdlet to deliver information about command processing."
@@ -228,6 +234,24 @@ function Test-TargetResource
         if ( $PSBoundParameters.ContainsKey("ReadOnly") -and $CurrentResource.ReadOnly -ne $PSBoundParameters["ReadOnly"] )
         {
             return $false
+        }
+        if ( $PSBoundParameters.ContainsKey("ReplicationPeers"))
+        {
+            foreach ($ReplicationPeer in $ReplicationPeers)
+            {
+                if ( $CurrentResource.IncomingConnectionsSources -notcontains $ReplicationPeer)
+                {
+                    return false
+                }
+                if ( -not $ReadOnly )
+                {
+                    if ( $CurrentResource.OutgoingConnectionsDestinations -notcontains $ReplicationPeer)
+                    {
+                        return false
+                    }
+   
+                }
+            }
         }
     }
     else

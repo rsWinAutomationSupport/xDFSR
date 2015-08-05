@@ -8,5 +8,6 @@ class MSFT_xReplicationGroupMember : OMI_BaseResource
 	[Key] String ReplicationGroup;
 	[Key] String FolderName;
 	[Key] String ContentPath;
+	[Write] String ReplicationPeers[];
 };
 
