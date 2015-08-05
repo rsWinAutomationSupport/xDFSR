@@ -163,7 +163,7 @@ function Set-TargetResource
 
             #Adding Member to Replication Group
             $params.ScriptBlock = [scriptblock]::Create("Add-DfsrMember -GroupName $($PSBoundParameters["ReplicationGroup"]) -ComputerName $env:COMPUTERNAME -Description 'Adding as part of DevOps Automation Services'")
-            Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
+            Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         }
         Write-Verbose "$($PSBoundParameters["ContentPath"]) - $($CurrentResource["ContentPath"])"
         if ( $CurrentResource["ContentPath"] -ne $PSBoundParameters["ContentPath"] -or ( $PSBoundParameters.ContainsKey("ReadOnly") -and $CurrentResource["ReadOnly"] -ne $PSBoundParameters["ReadOnly"]) )
@@ -184,17 +184,34 @@ function Set-TargetResource
             {
                 if ( $CurrentResource.IncomingConnectionsSources -notcontains $ReplicationPeer)
                 {
-                    $params = @{
-                        "ScriptBlock" = [scriptblock]::Create("Set-DfsrMembership -ComputerName $env:COMPUTERNAME -GroupName $($PSBoundParameters["ReplicationGroup"]) -FolderName $($PSBoundParameters["FolderName"]) -ContentPath $($PSBoundParameters["ContentPath"]) $( If ($PSBoundParameters.ContainsKey("ReadOnly")) {"-ReadOnly `$$($PSBoundParameters["ReadOnly"])"}) -Force")
-                    }
-                    if ( $PSBoundParameters.ContainsKey("Credential") )
-                    {
-                        $params.Add("Credential",$PSBoundParameters["Credential"])
-                    }
-
+                    $Command = "Add-DfsrConnection -GroupName $($PSBoundParameters["ReplicationGroup"]) -SourceComputerName $ReplicationPeer -DestinationComputerName $env:COMPUTERNAME"
                 }
+                if ( $ReadOnly -and $CurrentResource.OutgoingConnectionsDestinations -contains $ReplicationPeer)
+                {
+                    $params["ScriptBlock"] += " -CreateOneWay"
+                }
+                $params = @{
+                    "ScriptBlock" = [scriptblock]::Create($Command)
+                }
+
+                if ( $PSBoundParameters.ContainsKey("Credential") )
+                {
+                    $params.Add("Credential",$PSBoundParameters["Credential"])
+                }
+                Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
             }
         }
+    }
+    else
+    {
+        $params = @{
+            "ScriptBlock" = [scriptblock]::Create("Remove-DfsrMember -GroupName $($PSBoundParameters["ReplicationGroup"]) -ComputerName $env:COMPUTERNAME -Force")
+        }
+        if ( $PSBoundParameters.ContainsKey("Credential") )
+        {
+            $params.Add("Credential",$PSBoundParameters["Credential"])
+        }
+        Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
     }
 }
 
@@ -260,12 +277,9 @@ function Test-TargetResource
                 {
                     return $false
                 }
-                if ( -not $ReadOnly )
+                if ( -not $ReadOnly -and  $CurrentResource.OutgoingConnectionsDestinations -notcontains $ReplicationPeer)
                 {
-                    if ( $CurrentResource.OutgoingConnectionsDestinations -notcontains $ReplicationPeer)
-                    {
-                        return $false
-                    }
+                    return $false
                 }
             }
         }
