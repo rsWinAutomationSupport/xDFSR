@@ -50,16 +50,6 @@ function Get-TargetResource
         Write-Verbose "Get-TargetResource: Get-DfsrMembership did not return any objects for group $($PSBoundParameters["ReplicationGroup"]), folder name `"$($PSBoundParameters["FolderName"])`" and Computer $($env:COMPUTERNAME)"
     }
 
-    #$ParamsToValidate = @{
-    #    "Memberships"      = $MemberShip;
-    #    "ReplicationGroup" = $PSBoundParameters["ReplicationGroup"];
-    #    "FolderName"       = $PSBoundParameters["FolderName"];
-    #    "ContentPath"      = $PSBoundParameters["ContentPath"];
-    #    "ReadOnly"         = $PSBoundParameters["ReadOnly"]
-    #}
-    #
-    #$Validated = Validate-Membership @ParamsToValidate
-
     $retObject = @{}
 
     if ($MemberShip)
@@ -82,21 +72,6 @@ function Get-TargetResource
 
     $retObject
 
-	#Write-Verbose "Use this cmdlet to deliver information about command processing."
-
-	#Write-Debug "Use this cmdlet to write debug information while troubleshooting."
-
-
-	<#
-	$returnValue = @{
-		Ensure = [System.String]
-		ReplicationGroup = [System.String]
-		ReadOnly = [System.Boolean]
-		Credential = [System.Management.Automation.PSCredential]
-	}
-
-	$returnValue
-	#>
 }
 
 
@@ -179,16 +154,6 @@ function Set-TargetResource
 
         }
     }
-
-    
-	#Write-Verbose "Use this cmdlet to deliver information about command processing."
-
-	#Write-Debug "Use this cmdlet to write debug information while troubleshooting."
-
-	#Include this line if the resource requires a system reboot.
-	#$global:DSCMachineStatus = 1
-
-
 }
 
 
@@ -203,7 +168,7 @@ function Test-TargetResource
 
 		[ValidateSet("Present","Absent")]
 		[System.String]
-		$Ensure,
+		$Ensure = "Present",
 
 		[System.Boolean]
 		$ReadOnly,
@@ -228,7 +193,7 @@ function Test-TargetResource
     
     $CurrentResource = Get-TargetResource @PSBoundParameters
 
-    if ( $PSBoundParameters["Ensure"] -eq "Present" )
+    if ( $Ensure -eq "Present" )
     {
         if ( $CurrentResource -eq "Absent" )
         {
@@ -253,87 +218,6 @@ function Test-TargetResource
 
     return $true
 }
-    #if ( -not ( Get-Module -ListAvailable -Name DFSR ) )
-    #{
-    #    throw "Please ensure that the DFSR Powershell module is installed"
-    #}
-    #
-    #$params = @{
-    #                ScriptBlock = [scriptblock]::Create("Get-DfsrMembership -GroupName $ReplicationGroup -ComputerName $env:COMPUTERNAME")
-    #           }
-    #
-    #if ( $PSBoundParameters.ContainsKey("Credential") )
-    #{
-    #    $params.Add("Credential",$Credential)
-    #}
-    #
-    #$MemberShip = Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
-    #
-    #if ( -not $MemberShip)
-    #{
-    #    Write-Verbose "Get-DfsrMembership did not return any objects for group $ReplicationGroup and Computer $($env:COMPUTERNAME)"
-    #    return $false
-    #}
-    #
-    #try
-    #{
-    #    if ( -not (Validate-Membership -ReplicationGroup $PSBoundParameters["ReplicationGroup"] -FolderName $PSBoundParameters["FolderName"] -ContentPath $PSBoundParameters["ContentPath"] -Memberships $MemberShip -ReadOnly $PSBoundParameters["ReadOnly"]))
-    #    {
-    #        return $false
-    #    }
-    #}
-    #catch
-    #{}
-
-    #return $true
-	<#
-	$result = [System.Boolean]
-	
-	$result
-	#>
-    #}
-
-Function Validate-Membership
-{
- 	[CmdletBinding()]
-	[OutputType([System.Boolean])]
-    param
-    (
-		[System.Boolean]
-		$ReadOnly,
-
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$ReplicationGroup,
-
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$FolderName,
-
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$ContentPath,
-        
-        [parameter(Mandatory = $true)]
-        $Memberships
-    )
-
-
-    foreach ( $Membership in $Memberships)
-    {
-        if ( ($Membership.FolderName -eq $PSBoundParameters["FolderName"]) -and
-             ($Membership.GroupName -eq $PSBoundParameters["ReplicationGroup"]) -and
-             ($Membership.ContentPath -eq $PSBoundParameters["ContentPath"]) -and
-             ($Membership.ReadOnly -eq $PSBoundParameters["ReadOnly"]))
-        {
-            return $Membership
-        }
-    }
-
-    return $null
-
-}
-
 
 Export-ModuleMember -Function *-TargetResource
 
