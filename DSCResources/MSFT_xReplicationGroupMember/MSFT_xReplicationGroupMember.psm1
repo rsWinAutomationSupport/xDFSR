@@ -54,12 +54,34 @@ function Get-TargetResource
 
     if ($MemberShip)
     {
+        $paramsIncoming = @{
+                        ScriptBlock = [scriptblock]::Create("Get-DfsrConnection -GroupName $ReplicationGroup -DestinationComputerName $env:COMPUTERNAME")
+        }
+        if ( $PSBoundParameters.ContainsKey("Credential") )
+        {
+            $paramsIncoming.Add("Credential",$PSBoundParameters["Credential"])
+        }
+        $paramsOutgoing = @{
+                        ScriptBlock = [scriptblock]::Create("Get-DfsrConnection -GroupName $ReplicationGroup -SourceComputerName $env:COMPUTERNAME")
+        }
+        if ( $PSBoundParameters.ContainsKey("Credential") )
+        {
+            $paramsOutgoing.Add("Credential",$PSBoundParameters["Credential"])
+        }
+
+        $IncomingConnections = Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+        $OutgoingConnections = Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+        $SourceServerList = [String[]]($IncomingConnections.SourceComputerName)
+        $DestinationServerList = [String[]]($OutgoingConnections.DestinationComputerName)
+
         $retObject = @{
-            "Ensure"           = "Present";
-            "ReplicationGroup" = $MemberShip.GroupName;
-            "FolderName"       = $MemberShip.FolderName;
-            "ContentPath"      = $MemberShip.ContentPath;
-            "ReadOnly"         = $MemberShip.ReadOnly
+            "Ensure"                          = "Present";
+            "ReplicationGroup"                = $MemberShip.GroupName;
+            "FolderName"                      = $MemberShip.FolderName;
+            "ContentPath"                     = $MemberShip.ContentPath;
+            "ReadOnly"                        = $MemberShip.ReadOnly;
+            "IncomingConnectionsSources"      = $SourceServerList;
+            "OutgoingConnectionsDestinations" = $DestinationServerList
         }
     }
     else
