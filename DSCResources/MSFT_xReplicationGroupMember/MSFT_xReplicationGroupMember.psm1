@@ -24,7 +24,10 @@ function Get-TargetResource
 
 		[parameter(Mandatory = $true)]
 		[System.String]
-		$ContentPath
+		$ContentPath,
+
+        [System.String[]]
+        $ReplicationPeers
 	)
 
     if ( -not ( Get-Module -ListAvailable -Name DFSR ) )
@@ -173,10 +176,24 @@ function Set-TargetResource
             {
                 $params.Add("Credential",$PSBoundParameters["Credential"])
             }
-            $params
-            Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
+            Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+        }
+        if ( $PSBoundParameters.ContainsKey("ReplicationPeers"))
+        {
+            foreach ($ReplicationPeer in $ReplicationPeers)
+            {
+                if ( $CurrentResource.IncomingConnectionsSources -notcontains $ReplicationPeer)
+                {
+                    $params = @{
+                        "ScriptBlock" = [scriptblock]::Create("Set-DfsrMembership -ComputerName $env:COMPUTERNAME -GroupName $($PSBoundParameters["ReplicationGroup"]) -FolderName $($PSBoundParameters["FolderName"]) -ContentPath $($PSBoundParameters["ContentPath"]) $( If ($PSBoundParameters.ContainsKey("ReadOnly")) {"-ReadOnly `$$($PSBoundParameters["ReadOnly"])"}) -Force")
+                    }
+                    if ( $PSBoundParameters.ContainsKey("Credential") )
+                    {
+                        $params.Add("Credential",$PSBoundParameters["Credential"])
+                    }
 
-
+                }
+            }
         }
     }
 }
@@ -241,15 +258,14 @@ function Test-TargetResource
             {
                 if ( $CurrentResource.IncomingConnectionsSources -notcontains $ReplicationPeer)
                 {
-                    return false
+                    return $false
                 }
                 if ( -not $ReadOnly )
                 {
                     if ( $CurrentResource.OutgoingConnectionsDestinations -notcontains $ReplicationPeer)
                     {
-                        return false
+                        return $false
                     }
-   
                 }
             }
         }
