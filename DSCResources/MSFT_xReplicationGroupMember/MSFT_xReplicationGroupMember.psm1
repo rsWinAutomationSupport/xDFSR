@@ -47,7 +47,7 @@ function Get-TargetResource
         $params.Add("Credential",$PSBoundParameters["Credential"])
     }
 
-    $AllMemberShips = Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+    $AllMemberShips = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
     $MemberShip = $AllMemberShips | Where-Object { $_.FolderName -eq $PSBoundParameters["FolderName"] } 
 
 
@@ -75,8 +75,8 @@ function Get-TargetResource
             $paramsOutgoing.Add("Credential",$PSBoundParameters["Credential"])
         }
 
-        $IncomingConnections = Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
-        $OutgoingConnections = Start-Job @paramsOutgoing | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+        $IncomingConnections = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+        $OutgoingConnections = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @paramsOutgoing | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
         $SourceServerList = [String[]]($IncomingConnections.SourceComputerName)
         $DestinationServerList = [String[]]($OutgoingConnections.DestinationComputerName)
 
@@ -155,7 +155,7 @@ function Set-TargetResource
             {
                 $params.Add("Credential",$PSBoundParameters["Credential"])
             }
-            $ExistingReplicationGroup = Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
+            $ExistingReplicationGroup = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
             if ( -not $ExistingReplicationGroup )
             {
                 Write-Verbose "Replication Group specified ($($PSBoundParameters["ReplicationGroup"])) does not exist. Terminating."
@@ -163,7 +163,7 @@ function Set-TargetResource
             }
 
             $params["ScriptBlock"] = [scriptblock]::Create("Get-DfsReplicatedFolder -GroupName $($PSBoundParameters["ReplicationGroup"]) -FolderName $($PSBoundParameters["FolderName"])")
-            $ExistingReplicatedFolder = Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
+            $ExistingReplicatedFolder = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
             if ( -not $ExistingReplicatedFolder )
             {
                 Write-Verbose "Replicated Folder specified ($($PSBoundParameters["FolderName"])) does not exist. Terminating."
@@ -172,7 +172,7 @@ function Set-TargetResource
 
             #Adding Member to Replication Group
             $params.ScriptBlock = [scriptblock]::Create("Add-DfsrMember -GroupName $($PSBoundParameters["ReplicationGroup"]) -ComputerName $env:COMPUTERNAME -Description 'Adding as part of DevOps Automation Services'")
-            Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+            Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         }
         Write-Verbose "$($PSBoundParameters["ContentPath"]) - $($CurrentResource["ContentPath"])"
         if ( $CurrentResource["ContentPath"] -ne $PSBoundParameters["ContentPath"] -or ( $PSBoundParameters.ContainsKey("ReadOnly") -and $CurrentResource["ReadOnly"] -ne $PSBoundParameters["ReadOnly"]) )
@@ -185,7 +185,7 @@ function Set-TargetResource
             {
                 $params.Add("Credential",$PSBoundParameters["Credential"])
             }
-            Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+            Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         }
         if ( $PSBoundParameters.ContainsKey("ReplicationPeers"))
         {
@@ -207,7 +207,7 @@ function Set-TargetResource
                 {
                     $params.Add("Credential",$PSBoundParameters["Credential"])
                 }
-                Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+                Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
             }
         }
     }
@@ -220,7 +220,7 @@ function Set-TargetResource
         {
             $params.Add("Credential",$PSBoundParameters["Credential"])
         }
-        Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+        Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
     }
     Disable-WSManCredSSP -Role Client | Out-Null
     Disable-WSManCredSSP -Role Server | Out-Null
