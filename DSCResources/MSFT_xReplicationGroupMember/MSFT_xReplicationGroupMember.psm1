@@ -139,6 +139,7 @@ function Set-TargetResource
         if ( $CurrentResource["Ensure"] -ne "Present" )
         {
             Write-Verbose "Get-TargetResource returned Absent, need to Join machine to Replication Group"
+            Write-Verbose "$($PSBoundParameters["ReplicationGroup"])"
             $params = @{
                 "ScriptBlock" = [scriptblock]::Create("Get-DfsReplicationGroup -GroupName $($PSBoundParameters["ReplicationGroup"])")
             }
