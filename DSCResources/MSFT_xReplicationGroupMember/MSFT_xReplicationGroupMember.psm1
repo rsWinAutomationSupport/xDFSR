@@ -35,6 +35,9 @@ function Get-TargetResource
         throw "Please ensure that the DFSR Powershell module is installed"
     }
 
+    Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
+    Enable-WSManCredSSP -Role Server -Force | Out-Null
+
     $params = @{
                     ScriptBlock = [scriptblock]::Create("Get-DfsrMembership -GroupName $ReplicationGroup -ComputerName $env:COMPUTERNAME")
                }
@@ -94,6 +97,8 @@ function Get-TargetResource
         }
     }
 
+    Disable-WSManCredSSP -Role Client | Out-Null
+    Disable-WSManCredSSP -Role Server | Out-Null
 
     $retObject
 
@@ -130,6 +135,9 @@ function Set-TargetResource
         [System.String[]]
         $ReplicationPeers
 	)
+
+    Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
+    Enable-WSManCredSSP -Role Server -Force | Out-Null
 
     $CurrentResource = Get-TargetResource @PSBoundParameters
     Write-Verbose "Ensure: $($PSBoundParameters["Ensure"])"
@@ -214,6 +222,8 @@ function Set-TargetResource
         }
         Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
     }
+    Disable-WSManCredSSP -Role Client | Out-Null
+    Disable-WSManCredSSP -Role Server | Out-Null
 }
 
 
