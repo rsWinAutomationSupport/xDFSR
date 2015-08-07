@@ -213,6 +213,18 @@ function Set-TargetResource
             }
             Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         }
+        if ( $NeedsJoining )
+        {
+            $SyncSource = $ReplicationPeers[(Get-Random -Maximum $ReplicationPeers.Count)]
+            $params = @{
+                "ScriptBlock" = [scriptblock]::Create("Sync-DfsReplicationGroup -GroupName $($PSBoundParameters["ReplicationGroup"]) -SourceComputerName $SyncSource -DestinationComputerName $($env:COMPUTERNAME) -DurationInMinutes 60"
+            }
+            if ( $PSBoundParameters.ContainsKey("Credential") )
+            {
+                $params.Add("Credential",$PSBoundParameters["Credential"])
+            }
+            Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+        }
     }
     else
     {
