@@ -75,8 +75,8 @@ function Get-TargetResource
             $paramsOutgoing.Add("Credential",$PSBoundParameters["Credential"])
         }
 
-        $IncomingConnections = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
-        $OutgoingConnections = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @paramsOutgoing | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+        $IncomingConnections = Invoke-Command -ComputerName . -Authentication Credssp @paramsIncoming #Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+        $OutgoingConnections = Invoke-Command -ComputerName . -Authentication Credssp @paramsOutgoing #Start-Job @paramsOutgoing | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
         $SourceServerList = [String[]]($IncomingConnections.SourceComputerName)
         $DestinationServerList = [String[]]($OutgoingConnections.DestinationComputerName)
 
