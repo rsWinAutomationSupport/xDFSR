@@ -217,7 +217,7 @@ function Set-TargetResource
         {
             $SyncSource = $ReplicationPeers[(Get-Random -Maximum $ReplicationPeers.Count)]
             $params = @{
-                "ScriptBlock" = [scriptblock]::Create("Sync-DfsReplicationGroup -GroupName $($PSBoundParameters["ReplicationGroup"]) -SourceComputerName $SyncSource -DestinationComputerName $($env:COMPUTERNAME) -DurationInMinutes 60"
+                "ScriptBlock" = [scriptblock]::Create("Sync-DfsReplicationGroup -GroupName $($PSBoundParameters["ReplicationGroup"]) -SourceComputerName $SyncSource -DestinationComputerName $($env:COMPUTERNAME) -DurationInMinutes 60")
             }
             if ( $PSBoundParameters.ContainsKey("Credential") )
             {
