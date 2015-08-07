@@ -135,6 +135,7 @@ function Set-TargetResource
         [System.String[]]
         $ReplicationPeers
 	)
+    $NeedsJoining = $false
     $CurrentResource = Get-TargetResource @PSBoundParameters
 
     Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
@@ -147,7 +148,7 @@ function Set-TargetResource
         if ( $CurrentResource["Ensure"] -ne "Present" )
         {
             Write-Verbose "Get-TargetResource returned Absent, need to Join machine to Replication Group"
-            Write-Verbose "$($PSBoundParameters["ReplicationGroup"])"
+            $NeedsJoining = $true
             $params = @{
                 "ScriptBlock" = [scriptblock]::Create("Get-DfsReplicationGroup -GroupName $($PSBoundParameters["ReplicationGroup"])")
             }
@@ -189,26 +190,28 @@ function Set-TargetResource
         }
         if ( $PSBoundParameters.ContainsKey("ReplicationPeers"))
         {
+            $Command = ""
             foreach ($ReplicationPeer in $ReplicationPeers)
             {
                 if ( $CurrentResource.IncomingConnectionsSources -notcontains $ReplicationPeer)
                 {
-                    $Command = "Add-DfsrConnection -GroupName $($PSBoundParameters["ReplicationGroup"]) -SourceComputerName $ReplicationPeer -DestinationComputerName $env:COMPUTERNAME"
+                    Write-Verbose "Adding missing incoming Connection from $ReplicationPeer"
+                    $Command += "`nAdd-DfsrConnection -GroupName $($PSBoundParameters["ReplicationGroup"]) -SourceComputerName $ReplicationPeer -DestinationComputerName $env:COMPUTERNAME -CreateOneWay"
                 }
                 if ( $ReadOnly -and $CurrentResource.OutgoingConnectionsDestinations -contains $ReplicationPeer)
                 {
-                    $params["ScriptBlock"] += " -CreateOneWay"
+                    Write-Verbose "Adding missing outgoing Connection to $ReplicationPeer"
+                    $Command += "`nAdd-DfsrConnection -GroupName $($PSBoundParameters["ReplicationGroup"]) -SourceComputerName $env:COMPUTERNAME -DestinationComputerName $ReplicationPeer -CreateOneWay"
                 }
-                $params = @{
-                    "ScriptBlock" = [scriptblock]::Create($Command)
-                }
-
-                if ( $PSBoundParameters.ContainsKey("Credential") )
-                {
-                    $params.Add("Credential",$PSBoundParameters["Credential"])
-                }
-                Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
             }
+            $params = @{
+                "ScriptBlock" = [scriptblock]::Create($Command)
+            }
+            if ( $PSBoundParameters.ContainsKey("Credential") )
+            {
+                $params.Add("Credential",$PSBoundParameters["Credential"])
+            }
+            Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         }
     }
     else
@@ -286,10 +289,12 @@ function Test-TargetResource
             {
                 if ( $CurrentResource.IncomingConnectionsSources -notcontains $ReplicationPeer)
                 {
+                    Write-Verbose "Incoming Connection from $ReplicationPeer is missing"
                     return $false
                 }
-                if ( -not $ReadOnly -and  $CurrentResource.OutgoingConnectionsDestinations -notcontains $ReplicationPeer)
+                if ( (-not $ReadOnly) -and  ($CurrentResource.OutgoingConnectionsDestinations -notcontains $ReplicationPeer) )
                 {
+                    Write-Verbose "Outgoing Connection to $ReplicationPeer is missing"
                     return $false
                 }
             }
