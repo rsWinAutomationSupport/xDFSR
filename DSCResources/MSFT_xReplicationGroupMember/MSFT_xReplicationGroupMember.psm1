@@ -213,6 +213,10 @@ function Set-TargetResource
             }
             Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         }
+        if ( -not (Test-Path -Path $ContentPath))
+        {
+            New-Item -Path $ContentPath -ItemType Directory
+        }
         #if ( $NeedsJoining )
         #{
         #    $SyncSource = $ReplicationPeers[(Get-Random -Maximum $ReplicationPeers.Count)]
@@ -310,6 +314,10 @@ function Test-TargetResource
                     return $false
                 }
             }
+        }
+        if ( -not (Test-Path -Path $ContentPath) )
+        {
+            return $false
         }
     }
     else
