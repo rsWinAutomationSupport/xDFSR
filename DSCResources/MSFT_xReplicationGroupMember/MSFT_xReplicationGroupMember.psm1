@@ -135,11 +135,11 @@ function Set-TargetResource
         [System.String[]]
         $ReplicationPeers
 	)
+    $CurrentResource = Get-TargetResource @PSBoundParameters
 
     Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
     Enable-WSManCredSSP -Role Server -Force | Out-Null
 
-    $CurrentResource = Get-TargetResource @PSBoundParameters
     Write-Verbose "Ensure: $($PSBoundParameters["Ensure"])"
     if ( $Ensure -eq "Present" )
     {
