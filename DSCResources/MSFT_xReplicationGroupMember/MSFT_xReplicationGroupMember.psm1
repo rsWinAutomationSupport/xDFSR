@@ -35,6 +35,7 @@ function Get-TargetResource
         throw "Please ensure that the DFSR Powershell module is installed"
     }
 
+    # TODO: Make this more elegant, i.e. save existing state of CredSSP and restore once done
     Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
     Enable-WSManCredSSP -Role Server -Force | Out-Null
 
@@ -97,6 +98,7 @@ function Get-TargetResource
         }
     }
 
+    # TODO: Make this more elegant, i.e. save existing state of CredSSP and restore once done
     Disable-WSManCredSSP -Role Client | Out-Null
     Disable-WSManCredSSP -Role Server | Out-Null
 
@@ -138,6 +140,7 @@ function Set-TargetResource
     $NeedsJoining = $false
     $CurrentResource = Get-TargetResource @PSBoundParameters
 
+    # TODO: Make this more elegant, i.e. save existing state of CredSSP and restore once done
     Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
     Enable-WSManCredSSP -Role Server -Force | Out-Null
 
@@ -241,6 +244,8 @@ function Set-TargetResource
         }
         Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
     }
+
+    # TODO: Make this more elegant, i.e. save existing state of CredSSP and restore once done
     Disable-WSManCredSSP -Role Client | Out-Null
     Disable-WSManCredSSP -Role Server | Out-Null
 }
@@ -283,20 +288,24 @@ function Test-TargetResource
 	#Write-Debug "Use this cmdlet to write debug information while troubleshooting."
 
     
+    Write-Verbose "Trying to determine Current state of DFSR resource"
     $CurrentResource = Get-TargetResource @PSBoundParameters
 
     if ( $Ensure -eq "Present" )
     {
         if ( $CurrentResource -eq "Absent" )
         {
+            Write-Verbose "No resource matching the specified Parameters found"
             return $false
         }
         if ( $CurrentResource["ContentPath"] -ne $PSBoundParameters["ContentPath"] )
         {
+            Write-Verbose "Desired ContentPath ($($PSBoundParameters["ContentPath"])) does not match ContentPath of existing resource ($($CurrentResource["ContentPath"]))"
             return $false
         }
         if ( $PSBoundParameters.ContainsKey("ReadOnly") -and $CurrentResource.ReadOnly -ne $PSBoundParameters["ReadOnly"] )
         {
+            Write-Verbose "Desired Value of ReadOnly set to $($PSBoundParameters["ReadOnly"]) but existing resource found with ReadOnly set to $($CurrentResource.ReadOnly)"
             return $false
         }
         if ( $PSBoundParameters.ContainsKey("ReplicationPeers"))
@@ -317,6 +326,7 @@ function Test-TargetResource
         }
         if ( -not (Test-Path -Path $ContentPath) )
         {
+            Write-Verbose "Desired ContentPath ($ContentPath) does not exist"
             return $false
         }
     }
