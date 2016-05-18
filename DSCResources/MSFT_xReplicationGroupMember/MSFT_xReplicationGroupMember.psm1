@@ -27,7 +27,10 @@ function Get-TargetResource
 		$ContentPath,
 
         [System.String[]]
-        $ReplicationPeers
+        $ReplicationPeers,
+
+	[System.Management.Automation.Runspaces.AuthenticationMechanism]
+	$AuthenticationMechanism = [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp
 	)
 
     if ( -not ( Get-Module -ListAvailable -Name DFSR ) )
@@ -36,8 +39,10 @@ function Get-TargetResource
     }
 
     # TODO: Make this more elegant, i.e. save existing state of CredSSP and restore once done
-    Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
-    Enable-WSManCredSSP -Role Server -Force | Out-Null
+    If($AuthenticationMechanism -eq [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp){
+	    Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
+	    Enable-WSManCredSSP -Role Server -Force | Out-Null
+    }
 
     $params = @{
                     ScriptBlock = [scriptblock]::Create("Get-DfsrMembership -GroupName $ReplicationGroup -ComputerName $env:COMPUTERNAME")
@@ -48,7 +53,7 @@ function Get-TargetResource
         $params.Add("Credential",$PSBoundParameters["Credential"])
     }
 
-    $AllMemberShips = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+    $AllMemberShips = Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @params #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
     $MemberShip = $AllMemberShips | Where-Object { $_.FolderName -eq $PSBoundParameters["FolderName"] } 
 
 
@@ -76,8 +81,8 @@ function Get-TargetResource
             $paramsOutgoing.Add("Credential",$PSBoundParameters["Credential"])
         }
 
-        $IncomingConnections = Invoke-Command -ComputerName . -Authentication Credssp @paramsIncoming #Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
-        $OutgoingConnections = Invoke-Command -ComputerName . -Authentication Credssp @paramsOutgoing #Start-Job @paramsOutgoing | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+        $IncomingConnections = Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @paramsIncoming #Start-Job @paramsIncoming | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
+        $OutgoingConnections = Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @paramsOutgoing #Start-Job @paramsOutgoing | Wait-Job | Receive-Job -Wait -AutoRemoveJob -ErrorVariable err 2>$null
         $SourceServerList = [String[]]($IncomingConnections.SourceComputerName)
         $DestinationServerList = [String[]]($OutgoingConnections.DestinationComputerName)
 
@@ -99,8 +104,10 @@ function Get-TargetResource
     }
 
     # TODO: Make this more elegant, i.e. save existing state of CredSSP and restore once done
-    Disable-WSManCredSSP -Role Client | Out-Null
-    Disable-WSManCredSSP -Role Server | Out-Null
+    If($AuthenticationMechanism -eq [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp){
+	    Disable-WSManCredSSP -Role Client | Out-Null
+	    Disable-WSManCredSSP -Role Server | Out-Null
+    }
 
     $retObject
 
@@ -135,14 +142,19 @@ function Set-TargetResource
 		$ContentPath,
 
         [System.String[]]
-        $ReplicationPeers
+        $ReplicationPeers,
+
+	[System.Management.Automation.Runspaces.AuthenticationMechanism]
+	$AuthenticationMechanism = [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp
 	)
     $NeedsJoining = $false
     $CurrentResource = Get-TargetResource @PSBoundParameters
 
     # TODO: Make this more elegant, i.e. save existing state of CredSSP and restore once done
-    Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
-    Enable-WSManCredSSP -Role Server -Force | Out-Null
+    If($AuthenticationMechanism -eq [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp){
+	    Enable-WSManCredSSP -DelegateComputer "$($env:COMPUTERNAME).*" -Role Client -Force | Out-Null
+	    Enable-WSManCredSSP -Role Server -Force | Out-Null
+    }
 
     Write-Verbose "Ensure: $($PSBoundParameters["Ensure"])"
     if ( $Ensure -eq "Present" )
@@ -159,7 +171,7 @@ function Set-TargetResource
             {
                 $params.Add("Credential",$PSBoundParameters["Credential"])
             }
-            $ExistingReplicationGroup = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
+            $ExistingReplicationGroup = Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @params #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
             if ( -not $ExistingReplicationGroup )
             {
                 Write-Verbose "Replication Group specified ($($PSBoundParameters["ReplicationGroup"])) does not exist. Terminating."
@@ -167,7 +179,7 @@ function Set-TargetResource
             }
 
             $params["ScriptBlock"] = [scriptblock]::Create("Get-DfsReplicatedFolder -GroupName $($PSBoundParameters["ReplicationGroup"]) -FolderName $($PSBoundParameters["FolderName"])")
-            $ExistingReplicatedFolder = Invoke-Command -ComputerName . -Authentication Credssp @params #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
+            $ExistingReplicatedFolder = Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @params #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob
             if ( -not $ExistingReplicatedFolder )
             {
                 Write-Verbose "Replicated Folder specified ($($PSBoundParameters["FolderName"])) does not exist. Terminating."
@@ -176,7 +188,7 @@ function Set-TargetResource
 
             #Adding Member to Replication Group
             $params.ScriptBlock = [scriptblock]::Create("Add-DfsrMember -GroupName $($PSBoundParameters["ReplicationGroup"]) -ComputerName $env:COMPUTERNAME -Description 'Adding as part of DevOps Automation Services'")
-            Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+            Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         }
         Write-Verbose "$($PSBoundParameters["ContentPath"]) - $($CurrentResource["ContentPath"])"
         if ( $CurrentResource["ContentPath"] -ne $PSBoundParameters["ContentPath"] -or ( $PSBoundParameters.ContainsKey("ReadOnly") -and $CurrentResource["ReadOnly"] -ne $PSBoundParameters["ReadOnly"]) )
@@ -189,7 +201,7 @@ function Set-TargetResource
             {
                 $params.Add("Credential",$PSBoundParameters["Credential"])
             }
-            Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+            Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         }
         if ( $PSBoundParameters.ContainsKey("ReplicationPeers"))
         {
@@ -214,7 +226,7 @@ function Set-TargetResource
             {
                 $params.Add("Credential",$PSBoundParameters["Credential"])
             }
-            Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+            Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         }
         if ( -not (Test-Path -Path $ContentPath))
         {
@@ -230,7 +242,7 @@ function Set-TargetResource
         #    {
         #        $params.Add("Credential",$PSBoundParameters["Credential"])
         #    }
-        #    Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+        #    Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
         #}
     }
     else
@@ -242,12 +254,14 @@ function Set-TargetResource
         {
             $params.Add("Credential",$PSBoundParameters["Credential"])
         }
-        Invoke-Command -ComputerName . -Authentication Credssp @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
+        Invoke-Command -ComputerName . -Authentication $AuthenticationMechanism @params | Out-Null #Start-Job @params | Wait-Job | Receive-Job -Wait -AutoRemoveJob | Out-Null
     }
 
     # TODO: Make this more elegant, i.e. save existing state of CredSSP and restore once done
-    Disable-WSManCredSSP -Role Client | Out-Null
-    Disable-WSManCredSSP -Role Server | Out-Null
+    If($AuthenticationMechanism -eq [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp){
+	    Disable-WSManCredSSP -Role Client | Out-Null
+	    Disable-WSManCredSSP -Role Server | Out-Null
+    }
 }
 
 
@@ -280,7 +294,10 @@ function Test-TargetResource
 		$ContentPath,
 
         [System.String[]]
-        $ReplicationPeers
+        $ReplicationPeers,
+
+	[System.Management.Automation.Runspaces.AuthenticationMechanism]
+	$AuthenticationMechanism = [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp
 	)
 
 	#Write-Verbose "Use this cmdlet to deliver information about command processing."
