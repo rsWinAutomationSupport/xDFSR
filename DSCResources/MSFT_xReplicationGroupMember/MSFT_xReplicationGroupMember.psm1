@@ -29,10 +29,11 @@ function Get-TargetResource
         [System.String[]]
         $ReplicationPeers,
 
-	[System.Management.Automation.Runspaces.AuthenticationMechanism]
-	$AuthenticationMechanism = [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp
+	[System.String]
+	$AuthenticationMechanism = "Credssp"
 	)
-
+	
+	$AuthenticationMechanism = [System.Management.Automation.Runspaces.AuthenticationMechanism]$AuthenticationMechanism
     if ( -not ( Get-Module -ListAvailable -Name DFSR ) )
     {
         throw "Please ensure that the DFSR Powershell module is installed"
@@ -144,9 +145,10 @@ function Set-TargetResource
         [System.String[]]
         $ReplicationPeers,
 
-	[System.Management.Automation.Runspaces.AuthenticationMechanism]
-	$AuthenticationMechanism = [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp
+	[System.String]
+	$AuthenticationMechanism = "Credssp"
 	)
+	$AuthenticationMechanism = [System.Management.Automation.Runspaces.AuthenticationMechanism]$AuthenticationMechanism
     $NeedsJoining = $false
     $CurrentResource = Get-TargetResource @PSBoundParameters
 
@@ -296,8 +298,8 @@ function Test-TargetResource
         [System.String[]]
         $ReplicationPeers,
 
-	[System.Management.Automation.Runspaces.AuthenticationMechanism]
-	$AuthenticationMechanism = [System.Management.Automation.Runspaces.AuthenticationMechanism]::Credssp
+	[System.String]
+	$AuthenticationMechanism = "Credssp"
 	)
 
 	#Write-Verbose "Use this cmdlet to deliver information about command processing."

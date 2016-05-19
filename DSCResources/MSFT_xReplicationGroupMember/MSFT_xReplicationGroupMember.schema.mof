@@ -5,6 +5,7 @@ class MSFT_xReplicationGroupMember : OMI_BaseResource
 	[Write, EmbeddedInstance("MSFT_Credential"), Description("Credentials to use")] String Credential;
 	[Write, ValueMap{"Present","Absent"}, Values{"Present","Absent"}] String Ensure;
 	[Write] Boolean ReadOnly;
+	[Write] String AuthenticationMechanism;
 	[Key] String ReplicationGroup;
 	[Key] String FolderName;
 	[Key] String ContentPath;
